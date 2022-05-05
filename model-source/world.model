@@ -1,0 +1,98 @@
+% Rest of world module
+
+
+!variables
+
+    "Foreign demand gap" yw_gap
+    "Foreign short-term rate, FCY" rw_fcy
+    "Foreign real short-term rate, FCY" rrw_fcy_tnd
+    "Foreign CPI, FCY" cpiw_fcy
+    "Foreign CPI, FCY, Rate of change" roc_cpiw_fcy
+
+
+!log-variables !all-but
+
+    rw_fcy, rrw_fcy_tnd
+
+
+!parameters
+
+    % Directly calibrate steady state properties
+
+    "S/S Real short-term rate, foreign currency" ss_rrw_fcy
+    "S/S Foreign CPI, Rate of change" ss_roc_cpiw_fcy
+
+
+    % Dynamic parameters
+
+    "Autoregression in foreign demand gap" c0_yw_gap
+    "Autoregression in foreign short-term rate" c0_rw
+    "Autoregression in real foreign short-term rate" c0_rrw_tnd
+    "Autoregression in foreign CPI inflation" c0_roc_cpiw
+
+
+!shocks
+
+    "Tune on foreign demand gap" tune_yw_gap
+    "Tune on foreign short-term rate" tune_rw
+    "Tune on real foreign short-term rate trend" tune_rrw_tnd
+    "Tune on to foreign CPI inflation" tune_roc_cpiw
+
+    "Shock to foreign demand gap" shock_yw_gap
+    "Shock to foreign short-term rate, FCY" shock_rw
+    "Shock to real foreign short-term rate trend, FCY" shock_rrw_tnd
+    "Shock to foreign CPI inflation" shock_roc_cpiw
+
+
+!substitutions
+
+    ss_rw := ((1 + ss_rrw_fcy) * ss_roc_cpiw_fcy - 1);
+
+
+!equations
+
+    "Foreign demand gap"
+    log(yw_gap) = ...
+        + c0_yw_gap * log(yw_gap{-1}) ...
+        + tune_yw_gap ...
+        + shock_yw_gap ...
+    !! yw_gap = 1;
+
+
+    "Short-term rate, FCY"
+    rw_fcy ...
+        = c0_rw * rw_fcy{-1} ...
+        + (1 - c0_rw) * $ss_rw$ ...
+        + tune_rw ...
+        + shock_rw ...
+    !! rw_fcy = $ss_rw$;
+
+
+    "Real foreign short-term rate trend, FCY"
+    rrw_fcy_tnd = ...
+        + c0_rrw_tnd * rrw_fcy_tnd{-1} ...
+        + (1 - c0_rrw_tnd) * ss_rrw_fcy ...
+        + tune_rrw_tnd ...
+        + shock_rrw_tnd ...
+    !! rrw_fcy_tnd = ss_rrw_fcy;
+
+
+    "Foreign CPI inflation"
+    log(roc_cpiw_fcy) ...
+        = c0_roc_cpiw * log(roc_cpiw_fcy{-1}) ...
+        + (1 - c0_roc_cpiw) * log(ss_roc_cpiw_fcy) ...
+        + tune_roc_cpiw ...
+        + shock_roc_cpiw ...
+    !! roc_cpiw_fcy = ss_roc_cpiw_fcy;
+
+    roc_cpiw_fcy = cpiw_fcy / cpiw_fcy{-1};
+
+
+!autoswaps-simulate
+
+    yw_gap := tune_yw_gap;
+    roc_cpiw_fcy := tune_roc_cpiw;
+    rw_fcy := tune_rw;
+    rrw_fcy_tnd := tune_rrw_tnd;
+
+
